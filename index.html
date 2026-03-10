@@ -120,16 +120,50 @@
         const urlPreviewArea = document.getElementById('urlPreviewArea');
         const generatedUrl = document.getElementById('generatedUrl');
 
-        // デフォルトの日時をセット
+        let isEndTimeModified = false;
+        let isEndDateModified = false;
+
+        // 初期設定
         const now = new Date();
         now.setMinutes(0);
         const start = new Date(now.getTime() + 60 * 60 * 1000);
         const end = new Date(start.getTime() + 60 * 60 * 1000);
 
-        startTime.value = start.toISOString().slice(0, 16);
-        endTime.value = end.toISOString().slice(0, 16);
-        startDate.value = start.toISOString().slice(0, 10);
-        endDate.value = start.toISOString().slice(0, 10);
+        startTime.value = formatDateTimeLocal(start);
+        endTime.value = formatDateTimeLocal(end);
+        startDate.value = formatDate(start);
+        endDate.value = formatDate(start);
+
+        function formatDateTimeLocal(date) {
+            const tzOffset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+        }
+
+        function formatDate(date) {
+            const tzOffset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+        }
+
+        // 開始日時を変更した際、終了日時を1時間後に自動調整
+        startTime.addEventListener('input', () => {
+            if (!isEndTimeModified && startTime.value) {
+                const newStart = new Date(startTime.value);
+                const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000);
+                endTime.value = formatDateTimeLocal(newEnd);
+            }
+        });
+
+        // ユーザーが手動で終了日時を触ったら自動調整を解除
+        endTime.addEventListener('focus', () => isEndTimeModified = true);
+        
+        // 開始日を変更した際、終了日を同じ日に自動調整（終日の場合）
+        startDate.addEventListener('input', () => {
+            if (!isEndDateModified && startDate.value) {
+                endDate.value = startDate.value;
+            }
+        });
+
+        endDate.addEventListener('focus', () => isEndDateModified = true);
 
         // 終日チェックボックスの切り替え
         allDayCheck.addEventListener('change', (e) => {
@@ -155,10 +189,8 @@
             if (!dateStr) return "";
             const d = new Date(dateStr);
             if (isAllDay) {
-                // YYYY-MM-DD -> YYYYMMDD
                 return d.toISOString().slice(0, 10).replace(/-/g, "");
             } else {
-                // YYYY-MM-DDTHH:mm -> YYYYMMDDTHHmmSSZ (UTC)
                 return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
             }
         }
@@ -187,7 +219,6 @@
             let startParam, endParam;
             if (isAllDay) {
                 startParam = formatToGoogleDate(startDate.value, true);
-                // 終日の場合、終了日は「その日の翌日」を指定するのがGoogleの仕様
                 endParam = getNextDay(endDate.value);
             } else {
                 startParam = formatToGoogleDate(startTime.value, false);
