@@ -231,8 +231,37 @@
 
         copyBtn.addEventListener('click', () => { if(copyToClipboard(getUrl())) showStatus("URLをコピーしました！"); });
 
+        // QR生成ロジック：アイコン付き
         qrBtn.addEventListener('click', () => {
-            new QRious({ element: qrCanvas, value: getUrl(), size: 250, level: 'M' });
+            const url = getUrl();
+            const size = 300;
+            const iconSize = 60;
+
+            // QRコードの生成 (Error Correction LevelをHにしてアイコンで隠れても読めるようにする)
+            const qr = new QRious({
+                element: qrCanvas,
+                value: url,
+                size: size,
+                level: 'H'
+            });
+
+            const ctx = qrCanvas.getContext('2d');
+            
+            // アイコンの背景白枠を描画
+            ctx.fillStyle = "#FFFFFF";
+            const bgPos = (size - iconSize) / 2 - 4;
+            const bgSize = iconSize + 8;
+            ctx.beginPath();
+            ctx.roundRect(bgPos, bgPos, bgSize, bgSize, 8);
+            ctx.fill();
+
+            // アイコン（絵文字）を描画
+            ctx.font = `${iconSize * 0.8}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const icon = mode === 'calendar' ? '📅' : '✅';
+            ctx.fillText(icon, size / 2, size / 2);
+
             document.getElementById('qrModal').classList.remove('hidden');
         });
 
