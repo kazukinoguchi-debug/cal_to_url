@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Googleカレンダー・タスクURL生成ツール</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
         body {
             background-color: #f3f4f6;
@@ -30,49 +31,52 @@
             box-shadow: none !important;
             transform: none !important;
         }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #qrModal { background-color: rgba(0, 0, 0, 0.6); }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-2xl mx-auto">
         <div class="card p-6 md:p-8">
             <h1 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <svg class="w-8 h-8 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z"/>
-                </svg>
+                <span class="mr-2 text-3xl">📅</span>
                 共有URL生成ツール
             </h1>
 
-            <!-- タブ切り替え -->
             <div class="flex border-b border-gray-200 mb-6">
                 <button id="tabCalendar" class="flex-1 py-3 text-sm font-bold tab-active transition">Googleカレンダー</button>
                 <button id="tabTask" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-blue-600 transition">Googleタスク</button>
             </div>
 
-            <p id="descriptionText" class="text-sm text-gray-600 mb-8 font-medium">
-                Googleカレンダー登録URLの生成
-            </p>
+            <p id="descriptionText" class="text-sm text-gray-600 mb-8 font-medium">Googleカレンダー登録URLの生成</p>
 
             <div class="space-y-4">
-                <!-- タイトル入力 -->
                 <div>
                     <label id="labelTitle" class="block text-sm font-semibold text-gray-700 mb-1">予定のタイトル *</label>
                     <input type="text" id="eventTitle" placeholder="例：打ち合わせ" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
                 </div>
 
-                <!-- 設定オプション -->
                 <div class="flex flex-wrap gap-4 py-2">
                     <div id="allDaySection" class="flex items-center space-x-2">
                         <input type="checkbox" id="allDayCheck" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <label for="allDayCheck" class="text-sm font-semibold text-gray-700 cursor-pointer">終日の予定にする</label>
                     </div>
-                    <!-- タスク用：期限なし設定（デフォルトはオフ＝期限あり） -->
                     <div id="noDueSection" class="hidden flex items-center space-x-2">
                         <input type="checkbox" id="noDueCheck" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <label for="noDueCheck" class="text-sm font-semibold text-gray-700 cursor-pointer">期限を設定しない</label>
                     </div>
                 </div>
 
-                <!-- 日時入力 -->
                 <div id="dateSection" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div id="startGroup">
                         <label id="labelStart" class="block text-sm font-semibold text-gray-700 mb-1">開始日時 *</label>
@@ -86,49 +90,55 @@
                     </div>
                 </div>
 
-                <!-- 場所（カレンダーのみ） -->
                 <div id="locationSection">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">場所</label>
                     <input type="text" id="location" placeholder="例：Zoom, 会議室など" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
 
-                <!-- 詳細メモ -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">詳細・メモ</label>
                     <textarea id="description" rows="3" placeholder="相手に伝えたいメモ" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
 
-                <!-- コピーボタン -->
-                <div class="pt-6 border-t border-gray-100">
+                <div class="pt-6 border-t border-gray-100 flex flex-col gap-3">
                     <button id="copyBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition duration-200 flex items-center justify-center shadow-lg active:transform active:scale-95 btn-disabled" disabled>
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
-                        </svg>
-                        生成URLをコピーする
+                        <span class="mr-2">📋</span>
+                        URLをコピー
                     </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="shortenBtn" class="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold py-3 rounded-xl transition duration-200 flex items-center justify-center active:transform active:scale-95 btn-disabled" disabled title="外部サービスを使用してURLを短縮します。プレビュー環境では動作しない場合があります。">
+                            <span id="shortenIcon" class="mr-2">🔗</span>
+                            短縮(is.gd)
+                        </button>
+                        <button id="qrBtn" class="bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold py-3 rounded-xl transition duration-200 flex items-center justify-center active:transform active:scale-95 btn-disabled" disabled>
+                            <span class="mr-2">📱</span>
+                            QRコード
+                        </button>
+                    </div>
                 </div>
 
-                <!-- ステータスメッセージ -->
                 <div id="statusMessage" class="hidden text-center text-sm font-medium py-3 rounded-lg mt-4"></div>
             </div>
         </div>
     </div>
 
+    <div id="qrModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-xs w-full mx-4">
+            <h3 class="text-lg font-bold mb-4">スマホでスキャン</h3>
+            <canvas id="qrCanvas" class="mx-auto mb-6"></canvas>
+            <button id="closeQr" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 rounded-lg transition">閉じる</button>
+        </div>
+    </div>
+
     <script>
+        // ---------------------------------------------------------
+        // UI & Event Handlers
+        // ---------------------------------------------------------
         const tabCalendar = document.getElementById('tabCalendar');
         const tabTask = document.getElementById('tabTask');
-        const descriptionText = document.getElementById('descriptionText');
-        const labelTitle = document.getElementById('labelTitle');
-        const labelStart = document.getElementById('labelStart');
-        const allDaySection = document.getElementById('allDaySection');
-        const noDueSection = document.getElementById('noDueSection');
-        const noDueCheck = document.getElementById('noDueCheck');
-        const dateSection = document.getElementById('dateSection');
-        const endTimeSection = document.getElementById('endTimeSection');
-        const locationSection = document.getElementById('locationSection');
-
         const eventTitle = document.getElementById('eventTitle');
         const allDayCheck = document.getElementById('allDayCheck');
+        const noDueCheck = document.getElementById('noDueCheck');
         const startTime = document.getElementById('startTime');
         const endTime = document.getElementById('endTime');
         const startDate = document.getElementById('startDate');
@@ -136,203 +146,142 @@
         const locationInput = document.getElementById('location');
         const descriptionInput = document.getElementById('description');
         const copyBtn = document.getElementById('copyBtn');
+        const shortenBtn = document.getElementById('shortenBtn');
+        const qrBtn = document.getElementById('qrBtn');
         const statusMessage = document.getElementById('statusMessage');
 
         let mode = 'calendar'; 
         let isEndTimeModified = false;
 
-        // 初期日時の設定
-        const now = new Date();
-        now.setMinutes(0);
-        const start = new Date(now.getTime() + 60 * 60 * 1000);
-        const end = new Date(start.getTime() + 60 * 60 * 1000);
+        const init = () => {
+            const now = new Date();
+            now.setMinutes(0);
+            const start = new Date(now.getTime() + 3600000);
+            const end = new Date(start.getTime() + 3600000);
+            const offset = now.getTimezoneOffset() * 60000;
+            startTime.value = new Date(start.getTime() - offset).toISOString().slice(0, 16);
+            endTime.value = new Date(end.getTime() - offset).toISOString().slice(0, 16);
+            startDate.value = new Date(start.getTime() - offset).toISOString().slice(0, 10);
+            endDate.value = startDate.value;
+        };
 
-        function formatDateTimeLocal(date) {
-            const tzOffset = date.getTimezoneOffset() * 60000;
-            return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
-        }
-        function formatDate(date) {
-            const tzOffset = date.getTimezoneOffset() * 60000;
-            return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
-        }
+        init();
 
-        startTime.value = formatDateTimeLocal(start);
-        endTime.value = formatDateTimeLocal(end);
-        startDate.value = formatDate(start);
-        endDate.value = formatDate(start);
-
-        // タブ切り替え処理
-        tabCalendar.addEventListener('click', () => setMode('calendar'));
-        tabTask.addEventListener('click', () => setMode('task'));
-
-        function setMode(newMode) {
-            mode = newMode;
-            updateUIVisibility();
-            validateInput();
-        }
-
-        function updateUIVisibility() {
+        const updateUI = () => {
             const isAllDay = allDayCheck.checked;
             const noDue = noDueCheck.checked;
+            const isCal = mode === 'calendar';
 
-            if (mode === 'calendar') {
-                tabCalendar.className = "flex-1 py-3 text-sm font-bold tab-active transition";
-                tabTask.className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-blue-600 transition";
-                descriptionText.textContent = "Googleカレンダー登録URLの生成";
-                labelTitle.textContent = "予定のタイトル *";
-                labelStart.textContent = isAllDay ? "開始日 *" : "開始日時 *";
-                
-                allDaySection.classList.remove('hidden');
-                noDueSection.classList.add('hidden');
-                
-                dateSection.classList.remove('hidden');
-                endTimeSection.classList.remove('hidden');
-                locationSection.classList.remove('hidden');
-
-                if (isAllDay) {
-                    endDate.value = startDate.value;
-                }
-            } else {
-                tabTask.className = "flex-1 py-3 text-sm font-bold tab-active transition";
-                tabCalendar.className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-blue-600 transition";
-                descriptionText.textContent = "Googleタスク追加URLの生成";
-                labelTitle.textContent = "タスク名 *";
-                
-                allDaySection.classList.remove('hidden');
-                noDueSection.classList.remove('hidden');
-                
-                labelStart.textContent = isAllDay ? "期日 *" : "期日と時間 *";
-                
-                // 「期限なし」チェックが入っていれば日付入力を隠す
-                dateSection.classList.toggle('hidden', noDue);
-                endTimeSection.classList.add('hidden');
-                locationSection.classList.add('hidden');
-            }
+            tabCalendar.className = isCal ? "flex-1 py-3 text-sm font-bold tab-active transition" : "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-blue-600 transition";
+            tabTask.className = !isCal ? "flex-1 py-3 text-sm font-bold tab-active transition" : "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-blue-600 transition";
+            
+            document.getElementById('descriptionText').textContent = isCal ? "Googleカレンダー登録URLの生成" : "Googleタスク追加URLの生成";
+            document.getElementById('labelTitle').textContent = isCal ? "予定のタイトル *" : "タスク名 *";
+            document.getElementById('labelStart').textContent = isAllDay ? "期日/開始日 *" : "期日/開始日時 *";
+            
+            document.getElementById('allDaySection').classList.remove('hidden');
+            document.getElementById('noDueSection').classList.toggle('hidden', isCal);
+            document.getElementById('dateSection').classList.toggle('hidden', !isCal && noDue);
+            document.getElementById('endTimeSection').classList.toggle('hidden', !isCal);
+            document.getElementById('locationSection').classList.toggle('hidden', !isCal);
             
             startTime.classList.toggle('hidden', isAllDay);
             startDate.classList.toggle('hidden', !isAllDay);
-            endDate.classList.toggle('hidden', !isAllDay || mode === 'task');
-        }
+            endDate.classList.toggle('hidden', !isAllDay || !isCal);
+        };
 
-        // 時間指定：開始時刻に合わせて終了時刻を1時間後に自動調整
-        startTime.addEventListener('input', () => {
-            if (mode === 'calendar' && !isEndTimeModified && startTime.value) {
-                const newStart = new Date(startTime.value);
-                const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000);
-                endTime.value = formatDateTimeLocal(newEnd);
-            }
-        });
-
-        // 終日：開始日に合わせて終了日を自動調整
-        startDate.addEventListener('input', () => {
-            if (mode === 'calendar' && !isEndTimeModified && startDate.value) {
-                endDate.value = startDate.value;
-            }
-        });
-
-        endTime.addEventListener('focus', () => isEndTimeModified = true);
-        endDate.addEventListener('focus', () => isEndTimeModified = true);
-
-        // 入力チェック
-        function validateInput() {
-            const title = eventTitle.value.trim();
-            if (title) {
-                copyBtn.disabled = false;
-                copyBtn.classList.remove('btn-disabled');
-            } else {
-                copyBtn.disabled = true;
-                copyBtn.classList.add('btn-disabled');
-            }
-        }
-
-        [eventTitle, allDayCheck, noDueCheck, startTime, endTime, startDate, endDate, locationInput, descriptionInput].forEach(el => {
-            el.addEventListener('input', () => {
-                if (el === allDayCheck || el === noDueCheck) {
-                    isEndTimeModified = false; 
-                    updateUIVisibility();
-                }
-                validateInput();
+        const validate = () => {
+            const hasTitle = eventTitle.value.trim().length > 0;
+            [copyBtn, shortenBtn, qrBtn].forEach(btn => {
+                btn.disabled = !hasTitle;
+                btn.classList.toggle('btn-disabled', !hasTitle);
             });
+        };
+
+        [tabCalendar, tabTask].forEach(t => t.addEventListener('click', (e) => { mode = e.target.id === 'tabCalendar' ? 'calendar' : 'task'; updateUI(); validate(); }));
+        [eventTitle, allDayCheck, noDueCheck, startTime, endTime, startDate, endDate, locationInput, descriptionInput].forEach(el => {
+            el.addEventListener('input', () => { if(el === allDayCheck || el === noDueCheck) { isEndTimeModified = false; updateUI(); } validate(); });
         });
 
-        // Google用の日付フォーマット変換 (UTC)
-        function formatToGoogleDate(dateStr, isAllDay) {
-            if (!dateStr) return "";
-            const d = new Date(dateStr);
-            if (isAllDay) {
-                return d.toISOString().slice(0, 10).replace(/-/g, "");
-            } else {
-                return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-            }
-        }
-
-        // URL生成ロジック
-        function generateUrl() {
-            const title = eventTitle.value.trim();
-            if (!title) return null;
+        const getUrl = () => {
+            const title = encodeURIComponent(eventTitle.value.trim());
+            const desc = encodeURIComponent(descriptionInput.value.trim());
             const isAllDay = allDayCheck.checked;
             const noDue = noDueCheck.checked;
-            
+
+            const toGDate = (dStr, allDay) => {
+                const d = new Date(dStr);
+                if (allDay) return d.toISOString().slice(0, 10).replace(/-/g, "");
+                return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+            };
+
             if (mode === 'calendar') {
-                let startParam, endParam;
-                if (isAllDay) {
-                    startParam = startDate.value.replace(/-/g, "");
-                    const dEnd = new Date(endDate.value);
-                    dEnd.setDate(dEnd.getDate() + 1); 
-                    endParam = dEnd.toISOString().slice(0, 10).replace(/-/g, "");
-                } else {
-                    startParam = formatToGoogleDate(startTime.value, false);
-                    endParam = formatToGoogleDate(endTime.value, false);
-                }
-                const params = new URLSearchParams({
-                    action: "TEMPLATE",
-                    text: title,
-                    dates: `${startParam}/${endParam}`,
-                    location: locationInput.value.trim(),
-                    details: descriptionInput.value.trim()
-                });
-                return `https://www.google.com/calendar/render?${params.toString()}`;
+                let dates = isAllDay ? `${startDate.value.replace(/-/g, "")}/${new Date(new Date(endDate.value).getTime() + 86400000).toISOString().slice(0, 10).replace(/-/g, "")}` : `${toGDate(startTime.value)}/${toGDate(endTime.value)}`;
+                return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${desc}&location=${encodeURIComponent(locationInput.value.trim())}`;
             } else {
-                const params = new URLSearchParams({
-                    text: title,
-                    notes: descriptionInput.value.trim()
-                });
-                
-                // 「期限なし」チェックが入っていない場合のみ due パラメータを追加
-                if (!noDue) {
-                    const dateVal = isAllDay 
-                        ? startDate.value.replace(/-/g, "") 
-                        : formatToGoogleDate(startTime.value, false);
-                    params.append('due', dateVal);
-                }
-                
-                return `https://tasks.google.com/add?${params.toString()}`;
+                let url = `https://tasks.google.com/add?text=${title}&notes=${desc}`;
+                if (!noDue) url += `&due=${isAllDay ? startDate.value.replace(/-/g, "") : toGDate(startTime.value)}`;
+                return url;
             }
-        }
+        };
 
-        // コピー成功時のメッセージ表示
-        function showStatus(msg, isError = false) {
+        const showStatus = (msg, err = false) => {
             statusMessage.textContent = msg;
-            statusMessage.className = isError 
-                ? "text-red-600 bg-red-50 block p-3 rounded-lg mt-4" 
-                : "text-green-600 bg-green-50 block p-3 rounded-lg mt-4";
-            setTimeout(() => { statusMessage.className = "hidden"; }, 3000);
-        }
+            statusMessage.className = err ? "text-red-600 bg-red-50 block p-3 rounded-lg mt-4" : "text-green-600 bg-green-50 block p-3 rounded-lg mt-4";
+            setTimeout(() => statusMessage.className = "hidden", 4000);
+        };
 
-        // コピーボタン処理
-        copyBtn.addEventListener('click', () => {
-            const url = generateUrl();
-            if (!url) return;
-            const el = document.createElement('textarea');
-            el.value = url;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            showStatus("URLをコピーしました！メッセージに貼り付けて送ってください。");
+        const copyToClipboard = (text) => {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            const result = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return result;
+        };
+
+        copyBtn.addEventListener('click', () => { if(copyToClipboard(getUrl())) showStatus("URLをコピーしました！"); });
+
+        // ---------------------------------------------------------
+        // Shorten & QR
+        // ---------------------------------------------------------
+        shortenBtn.addEventListener('click', async () => {
+            const longUrl = getUrl();
+            const shortenIcon = document.getElementById('shortenIcon');
+            shortenBtn.disabled = true;
+            shortenIcon.innerHTML = '<span class="loading-spinner"></span>';
+            
+            try {
+                // is.gd API with a timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(longUrl)}`, { signal: controller.signal });
+                if (!response.ok) throw new Error();
+                
+                const shortUrl = await response.text();
+                if (copyToClipboard(shortUrl)) showStatus("短縮URLをコピーしました！");
+            } catch (error) {
+                // FALLBACK: If API fails, just copy long URL but inform the user
+                copyToClipboard(longUrl);
+                showStatus("短縮に失敗したため、通常のURLをコピーしました（CORS制限）", true);
+            } finally {
+                shortenBtn.disabled = false;
+                shortenIcon.innerHTML = '🔗';
+            }
         });
 
-        validateInput();
+        qrBtn.addEventListener('click', () => {
+            new QRious({ element: document.getElementById('qrCanvas'), value: getUrl(), size: 200, level: 'M' });
+            document.getElementById('qrModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeQr').addEventListener('click', () => document.getElementById('qrModal').classList.add('hidden'));
+        document.getElementById('qrModal').addEventListener('click', (e) => { if(e.target.id === 'qrModal') e.target.classList.add('hidden'); });
+
+        updateUI();
+        validate();
     </script>
 </body>
 </html>
