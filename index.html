@@ -39,7 +39,6 @@
         }
         #qrModal { background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
         
-        /* QRコードのキャンバスをレスポンシブかつ中央寄せにするためのスタイル */
         #qrCanvas {
             max-width: 100%;
             height: auto !important;
@@ -127,7 +126,6 @@
     <div id="qrModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4 sm:p-6">
         <div class="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-2xl text-center max-w-sm w-full mx-auto">
             <h3 class="text-xl font-bold mb-6 text-gray-800">QRコードをスキャン</h3>
-            <!-- コンテナを確実に中央寄せにする -->
             <div class="p-4 bg-gray-50 rounded-3xl flex items-center justify-center mb-8 overflow-hidden mx-auto" style="width: fit-content;">
                 <canvas id="qrCanvas"></canvas>
             </div>
@@ -277,6 +275,19 @@
 
         tabCalendar.addEventListener('click', () => { mode = 'calendar'; updateUI(); validate(); });
         tabTask.addEventListener('click', () => { mode = 'task'; updateUI(); validate(); });
+
+        // 開始日時の変更を監視して終了日時を連動させる
+        startTime.addEventListener('change', () => {
+            if (!startTime.value) return;
+            const startD = new Date(startTime.value);
+            const endD = new Date(startD.getTime() + 60 * 60 * 1000); // 1時間後
+            const offset = endD.getTimezoneOffset() * 60000;
+            endTime.value = new Date(endD.getTime() - offset).toISOString().slice(0, 16);
+        });
+
+        startDate.addEventListener('change', () => {
+            endDate.value = startDate.value;
+        });
 
         [eventTitle, allDayCheck, noDueCheck, startTime, endTime, startDate, endDate, locationInput, descriptionInput].forEach(el => {
             el.addEventListener('input', () => {
